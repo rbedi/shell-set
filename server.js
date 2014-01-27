@@ -27,9 +27,9 @@ for (var i = 0; i < 3; i++){
 }
 var cardsout = [];
 
-//shapes[0] = squigglies
+//shapes[0] = squigglies (^ triangles)
 //shapes[1] = ovals
-//shapes[2] = triangles
+//shapes[2] = triangles (v)
 //shapes[i][0] = empty
 //shapes[i][1] = half-filled
 //shapes[i][2] = fully-filled
@@ -105,7 +105,12 @@ net.createServer(function (socket) {
     broadcast(socket.name + "> " + data, socket);
 
     if(((data+"").trim()).substr(0,5)=='/nick'){
+      var old = socket.name;
       socket.name = ((data+"").trim()).substr(6);
+      broadcast(old + " is now known as " + socket.name + "\n", "host"); 
+    }
+    else if (((data+"").trim()).substr(0,5)=='/hint'){
+      hint();
     }
     var find = '^[A-L]+$';
     var re = new RegExp(find,'g')
@@ -281,6 +286,16 @@ function hasDuplicate(arr) {
     return false;
 }
 
+function hint(){
+  if(findSet() === undefined){
+    addThreeCards();
+  }
+  else{
+    set = findSet();
+    broadcast("HINT: SET includes card " + set[0] + "\n", "host");
+  }
+}
+
 function endGame(){
     broadcast("Out of cards, thanks for playing!", "host");
     process.exit();
@@ -305,7 +320,9 @@ function endGame(){
       printDeck();
     }
     else{
+      socket.score -= 0.25;
       broadcast("Not a super set...\n",socket.name);
+      broadcast(socket.name + "'s new score is: " + socket.score + "\n", "host");
     }
     }
     
@@ -326,7 +343,9 @@ function endGame(){
           printDeck(); 
         } 
         else{
+          socket.score -= 0.25;
           broadcast ("Not a set...\n",socket.name);
+          broadcast(socket.name + "'s new score is: " + socket.score + "\n", "host");
           /*if(findSet() !== undefined){
               broadcast ("But here's a set: " + findSet().toString() + "\n", "host");
           }*/
