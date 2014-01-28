@@ -11,15 +11,15 @@ var clients = [];
 var colors = 'wxy';
 //iov
 var numbers = '123';
-var shapes = 'O~V';
-var fill = 'Q@-';
+var shapes_ = '~OV';
+var fill = '@=:';
 var deck = [];
 
 for (var i = 0; i < 3; i++){
   for (var j = 0; j < 3; j++){
     for (var k = 0; k < 3; k++){
       for (var l = 0; l < 3; l++){
-        var card = colors[i]+numbers[j]+shapes[k]+fill[l];
+        var card = colors[i]+numbers[j]+shapes_[k]+fill[l];
         deck.push(card);
       }
     }
@@ -27,36 +27,17 @@ for (var i = 0; i < 3; i++){
 }
 var cardsout = [];
 
-//shapes[0] = squigglies (^ triangles)
-//shapes[1] = ovals
-//shapes[2] = triangles (v)
-//shapes[i][0] = empty
-//shapes[i][1] = half-filled
-//shapes[i][2] = fully-filled
-
 var shapes = [
-      [   
-          ["    XXX    ","  XX   XX  "," X       X ","XXXXXXXXXXX"],
-          ["    XXX    ","  XX X XX  "," X X X X X ","XXXXXXXXXXX"],
-          ["    XXX    ","  XXXXXXX  "," XXXXXXXXX ","XXXXXXXXXXX"]
-      ],       
-      [
-          [" XXXXXXXXX ","X         X","X         X"," XXXXXXXXX "],
-          [" XXXXXXXXX ","X X X X X X","X X X X X X"," XXXXXXXXX "],
-          [" XXXXXXXXX ","XXXXXXXXXXX","XXXXXXXXXXX"," XXXXXXXXX "]
-      ],
-      [
-          ["XXXXXXXXXXX"," X       X ","  XX   XX  ","    XXX    "],
-          ["XXXXXXXXXXX"," X X X X X ","  XX X XX  ","    XXX    "],
-          ["XXXXXXXXXXX"," XXXXXXXXX ","  XXXXXXX  ","    XXX    "]
-      ]
+  ["XXX  "," XXXX"," XXX ","XXX  ","XXXX ","  XXX"], // Squiggly
+  [" XXX ","XXXXX","XXXXX","XXXXX","XXXXX"," XXX "], // Oval
+  ["  X  "," XXX ","XXXXX","XXXXX"," XXX ","  X  "]  // Diamond
   ];
 
 
 
-var seed = 47;
+var seed = 47; 
 function random() {
-    //var x = Math.sin(seed++) * 10000;
+    //var x = Math.sin(seed++) * 10000; // lol -syd
     //return x - Math.floor(x);
     return Math.random();
 }
@@ -113,7 +94,7 @@ net.createServer(function (socket) {
       hint();
     }
     var find = '^[A-L]+$';
-    var re = new RegExp(find,'g')
+    var re = new RegExp(find,'g');
     input = ((data+"").trim()).toUpperCase();
     if(input.match(re) !== null){
         processGuess(((data+"").trim()).toUpperCase());
@@ -139,48 +120,43 @@ net.createServer(function (socket) {
   }
 
 function codeToAscii(code) {
-    var shape;
-    if (code[2] == '~') shape = 0;
-    else if (code[2] == 'V') shape = 2;
-    else shape = 1;
-    var fills;
-    if (code[3] == "Q") fills = 1;
-    else if (code[3] == "-") fills = 0;
-    else fills = 2;
-    var shapearr = shapes[shape][fills];
-    var shapearrColored = [];
-    for (var i = 0; i < 4; i++) {
-        var find = '[^ ]';
+    var shape = shapes_.indexOf(code[2]);
+    var fills = code[3];
+    var shapearr = shapes[shape];
+    var shapearrColor = [];
+    for (var i = 0; i < shapearr.length; i++) {
+        var find = 'X';
         var re = new RegExp(find, 'g');
-        shapearrColored[i] = "\033[;" + (11 + ((code.charAt(0)).toUpperCase()).charCodeAt() - "A".charCodeAt()) + "m" + shapearr[i] +  "\033[0m";
+        shapearrColor[i] = shapearr[i].replace(re, fills);
+        shapearrColor[i] = "\033[;" + (11 + ((code.charAt(0)).toUpperCase()).charCodeAt() - "A".charCodeAt()) + "m" + shapearrColor[i] +  "\033[0m";
+        if (code[1] == "3") {
+            shapearrColor[i] = shapearrColor[i] + " " + shapearrColor[i] + " " + shapearrColor[i];
+        } else if (code[1] == "2") {
+            shapearrColor[i] = "   " + shapearrColor[i] + " " + shapearrColor[i] + "   ";
+        } else {
+            shapearrColor[i] = "      " + shapearrColor[i] + "      ";
+        }
     }
-    var blank = ['           '];
-    if (code[1] == "3") {
-        return [].concat(shapearrColored,blank,shapearrColored,blank,shapearrColored);
-    } else if (code[1] == "2") {
-        return [].concat(blank,blank,shapearrColored,blank,blank,shapearrColored,blank,blank);
-    } else {
-        return [].concat(blank,blank,blank,blank,blank,shapearrColored,blank,blank,blank,blank,blank);
-    }
+    return shapearrColor;
 }
 
 function printDeck() {
-    var lines = ["","","","","","","","","","","","","",""];
+    var lines = ["","","","","",""];
     var label = "";
     for (var i = 0; i < cardsout.length; i++) {
         label += "     " + String.fromCharCode(i+"A".charCodeAt()) + "              ";
         var card = codeToAscii(cardsout[i]);
         for (var j = 0; j < card.length; j++) {
             lines[j] += card[j];
-            lines[j] += "         ";
+            lines[j] += "    ";
         }
-        if (i%4 == 3) {
+        if (i%3 == 2) {
             broadcast(label+"\n\n", "host");
             for (var k = 0; k < lines.length; k++) {
                 broadcast(lines[k] + "\n", "host");
             }
             broadcast("\n");
-            var lines = ["","","","","","","","","","","","","",""];
+            var lines = ["","","","","",""];
             var label = "";
 
         }
@@ -243,7 +219,7 @@ function printDeck() {
   }
 
   function findThirdCard(cards){
-    var properties = ["wxy","123","O~V","-Q@"];
+    var properties = ["wxy","123","~OV","@=:"];
     for (var i = 0; i < 4; i++) {
       if (cards[0][i]==cards[1][i]){
         properties[i] = cards[0][i];
@@ -346,9 +322,9 @@ function endGame(){
           socket.score -= 0.25;
           broadcast ("Not a set...\n",socket.name);
           broadcast(socket.name + "'s new score is: " + socket.score + "\n", "host");
-          /*if(findSet() !== undefined){
+          if(findSet() !== undefined){
               broadcast ("But here's a set: " + findSet().toString() + "\n", "host");
-          }*/
+          }
         }
     }
 
